@@ -1,0 +1,164 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: demo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: demo
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - demo-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - customer-net
+
+  inventory-service:
+    build:
+      context: ./inventory-service
+    container_name: inventory-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_NAME: demo
+      DB_USERNAME: demo
+      DB_PASSWORD: demo
+      JAVA_TOOL_OPTIONS: "-javaagent:/app/opentelemetry-javaagent.jar"
+      OTEL_SERVICE_NAME: inventory-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}"
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_TRACES_EXPORTER: otlp
+    ports:
+      - "17003:17003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:17003/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 90s
+    networks:
+      - customer-net
+
+  payment-service:
+    build:
+      context: ./payment-service
+    container_name: payment-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_NAME: demo
+      DB_USERNAME: demo
+      DB_PASSWORD: demo
+      INVENTORY_SERVICE_URL: http://inventory-service:17003
+      JAVA_TOOL_OPTIONS: "-javaagent:/app/opentelemetry-javaagent.jar"
+      OTEL_SERVICE_NAME: payment-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}"
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_TRACES_EXPORTER: otlp
+    ports:
+      - "17002:17002"
+    depends_on:
+      inventory-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:17002/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 90s
+    networks:
+      - customer-net
+
+  recommendation-agent:
+    build:
+      context: ./recommendation-agent
+    container_name: recommendation-agent
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://demo:demo@postgres:5432/demo
+      OTEL_SERVICE_NAME: recommendation-agent
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}"
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_TRACES_EXPORTER: otlp
+    ports:
+      - "17004:17004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:17004/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+    networks:
+      - customer-net
+
+  order-service:
+    build:
+      context: ./order-service
+    container_name: order-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_NAME: demo
+      DB_USERNAME: demo
+      DB_PASSWORD: demo
+      PAYMENT_SERVICE_URL: http://payment-service:17002
+      INVENTORY_SERVICE_URL: http://inventory-service:17003
+      RECOMMENDATION_AGENT_URL: http://recommendation-agent:17004
+      JAVA_TOOL_OPTIONS: "-javaagent:/app/opentelemetry-javaagent.jar"
+      OTEL_SERVICE_NAME: order-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4318}"
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_TRACES_EXPORTER: otlp
+    ports:
+      - "17001:17001"
+    depends_on:
+      payment-service:
+        condition: service_healthy
+      recommendation-agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:17001/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 90s
+    networks:
+      - customer-net
+
+  frontend:
+    image: nginx:alpine
+    container_name: demo-frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend/index.html:/usr/share/nginx/html/index.html:ro
+    ports:
+      - "17005:80"
+    networks:
+      - customer-net
+
+networks:
+  customer-net:
+    driver: bridge
+
+volumes:
+  demo-pg-data:

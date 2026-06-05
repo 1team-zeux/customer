@@ -1,0 +1,11 @@
+<configuration>
+  <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="payment-service"/>
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>{"time":"%d{yyyy-MM-dd HH:mm:ss}","service":"${appName}","level":"%level","traceId":"%X{trace_id}","spanId":"%X{span_id}","msg":"%msg"}%n</pattern>
+    </encoder>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>ZeuX 고객사 데모</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #fff; color: #111; max-width: 1000px; margin: 0 auto; padding: 48px 32px; }
+
+    h1 { font-size: 40px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 48px; }
+
+    h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; border-left: 3px solid #111; padding-left: 12px; }
+
+    section { margin-bottom: 48px; }
+
+    .field-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.6px; }
+    input {
+      background: #fff;
+      color: #111;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      width: 160px;
+      transition: border-color 0.15s;
+    }
+    input:focus { outline: none; border-color: #111; }
+
+    button {
+      padding: 9px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.75; }
+    .btn-main  { background: #111; color: #fff; }
+    .btn-chaos { background: #b91c1c; color: #fff; }
+    .btn-reset { background: #e5e7eb; color: #374151; }
+
+    pre {
+      background: #f8f8f8;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 14px 16px;
+      font-size: 12px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+      overflow-x: auto;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: #222;
+      margin-top: 12px;
+    }
+    pre.ok  { border-left: 3px solid #16a34a; }
+    pre.err { border-left: 3px solid #b91c1c; }
+
+    .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .scenario-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .scenario-card .s-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .scenario-card .s-desc {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .badge-on  { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .badge-off { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+
+    .info-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .info-card .s-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .info-card .s-desc { font-size: 12px; color: #444; line-height: 1.7; }
+    .info-card code { background: #e5e7eb; padding: 1px 6px; border-radius: 3px; font-family: 'SF Mono', monospace; font-size: 11px; }
+
+    .links { font-size: 12px; color: #888; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+    .links a { color: #111; font-weight: 600; text-decoration: none; }
+    .links a:hover { text-decoration: underline; }
+
+    hr { border: none; border-top: 1px solid #f0f0f0; margin: 40px 0; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+    th { text-align: left; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 10px; border-bottom: 2px solid #e5e7eb; }
+    td { padding: 9px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .status-confirmed { color: #16a34a; font-weight: 600; }
+    .status-failed    { color: #b91c1c; font-weight: 600; }
+    .status-pending   { color: #d97706; font-weight: 600; }
+    .btn-del { padding: 4px 10px; font-size: 12px; background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-del:hover { background: #fee2e2; }
+    .empty-row td { color: #9ca3af; text-align: center; padding: 24px; }
+  </style>
+</head>
+<body>
+
+  <h1>ZeuX 고객사 데모</h1>
+  <p class="subtitle">주문 → 결제 → 재고 → PostgreSQL · 추천 에이전트 / 장애 주입 · 관측 검증</p>
+
+  <!-- 1. 주문 생성 -->
+  <section>
+    <h2>주문 생성</h2>
+    <div class="field-row">
+      <div class="field"><label>사용자 ID</label><input id="userId" value="user-42"></div>
+      <div class="field"><label>상품 ID (1~3)</label><input id="productId" type="number" value="1" min="1" max="3"></div>
+      <div class="field"><label>수량</label><input id="quantity" type="number" value="2" min="1"></div>
+      <button class="btn-main" onclick="createOrder()">주문 생성</button>
+    </div>
+    <pre id="orderResult">—</pre>
+  </section>
+
+  <hr>
+
+  <!-- 2. 주문 조회 -->
+  <section>
+    <h2>주문 조회</h2>
+    <div class="field-row">
+      <div class="field"><label>주문 ID</label><input id="orderId" type="number" placeholder="응답에서 복사"></div>
+      <button class="btn-main" onclick="getOrder()">조회</button>
+    </div>
+    <pre id="getResult">—</pre>
+  </section>
+
+  <hr>
+
+  <!-- 3. 주문 목록 -->
+  <section>
+    <h2>주문 목록</h2>
+    <div class="field-row">
+      <button class="btn-main" onclick="listOrders()">목록 새로고침</button>
+    </div>
+    <table id="orderTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>사용자</th>
+          <th>상품</th>
+          <th>수량</th>
+          <th>상태</th>
+          <th>금액</th>
+          <th>생성일</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="orderTableBody">
+        <tr class="empty-row"><td colspan="8">목록 새로고침을 눌러 주세요</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <hr>
+
+  <!-- 4. 장애 주입 -->
+  <section>
+    <h2>장애 주입</h2>
+    <div class="scenario-grid">
+
+      <div class="scenario-card">
+        <div class="s-title">
+          시나리오 1 — DB 응답 지연
+          <span id="delayBadge" class="badge badge-off">OFF</span>
+        </div>
+        <div class="s-desc">
+          inventory-service 내부에서 <code>Thread.sleep(5000)</code> 주입.<br>
+          주문 요청 후 5초 이상 소요 → Latency 스파이크 → 알림 발생
+        </div>
+        <div class="btn-row">
+          <button class="btn-chaos" onclick="chaosOn('db-delay', 'delayBadge')">활성화</button>
+          <button class="btn-reset" onclick="chaosOff('db-delay', 'delayBadge')">초기화</button>
+        </div>
+      </div>
+
+      <div class="scenario-card">
+        <div class="s-title">
+          시나리오 2 — DB 연결 오류
+          <span id="errorBadge" class="badge badge-off">OFF</span>
+        </div>
+        <div class="s-desc">
+          inventory-service에서 <code>RuntimeException</code> 발생.<br>
+          HTTP 500 연쇄 → 주문 FAILED → Error Rate 알림 발생
+        </div>
+        <div class="btn-row">
+          <button class="btn-chaos" onclick="chaosOn('error', 'errorBadge')">활성화</button>
+          <button class="btn-reset" onclick="chaosOff('error', 'errorBadge')">초기화</button>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="s-title">시나리오 3 — 추천 에이전트 다운</div>
+        <div class="s-desc">
+          터미널에서 직접 실행:<br>
+          <code>docker stop recommendation-agent</code><br><br>
+          주문은 정상 처리됨 (graceful degradation, 빈 추천 반환).<br>
+          약 3분 후 <strong>RecommendationAgentDown</strong> 알림 발생.
+        </div>
+      </div>
+
+      <div class="scenario-card">
+        <div class="s-title">시나리오 4 — CPU 폭주 (30초)</div>
+        <div class="s-desc">
+          order-service에서 가상 스레드 스핀 30초 실행.<br>
+          <code>jvm_cpu_usage</code> 80% 초과 → <strong>ServiceCpuSpike</strong> 알림
+        </div>
+        <div class="btn-row">
+          <button class="btn-chaos" onclick="cpuSpike()">CPU 스파이크 실행</button>
+        </div>
+      </div>
+
+    </div>
+    <pre id="chaosResult">—</pre>
+  </section>
+
+  <div class="links">
+    Prometheus 알림 확인 →
+    <a href="http://localhost:17090/alerts" target="_blank">http://localhost:17090/alerts</a>
+  </div>
+
+  <script>
+    var BASE = 'http://localhost:17001';
+
+    function apiCall(method, path, body) {
+      var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      return fetch(BASE + path, opts)
+        .then(function(res) {
+          return res.text().then(function(text) {
+            var data;
+            try { data = JSON.parse(text); } catch(e) { data = text; }
+            return { ok: res.ok, status: res.status, data: data };
+          });
+        })
+        .catch(function(err) {
+          return { ok: false, status: 0, data: { error: err.message } };
+        });
+    }
+
+    function showResult(elId, result) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = 'HTTP ' + (result.status || 'ERR') + '\n\n' + JSON.stringify(result.data, null, 2);
+      el.className = result.ok ? 'ok' : 'err';
+    }
+
+    function setBadge(id, active) {
+      var b = document.getElementById(id);
+      if (!b) return;
+      b.textContent = active ? 'ON' : 'OFF';
+      b.className = active ? 'badge badge-on' : 'badge badge-off';
+    }
+
+    function createOrder() {
+      apiCall('POST', '/orders', {
+        userId:    document.getElementById('userId').value,
+        productId: parseInt(document.getElementById('productId').value, 10),
+        quantity:  parseInt(document.getElementById('quantity').value, 10)
+      }).then(function(r) {
+        showResult('orderResult', r);
+        if (r.ok && r.data && r.data.id) {
+          document.getElementById('orderId').value = r.data.id;
+        }
+      });
+    }
+
+    function getOrder() {
+      var id = document.getElementById('orderId').value;
+      if (!id) return;
+      apiCall('GET', '/orders/' + id).then(function(r) { showResult('getResult', r); });
+    }
+
+    function chaosOn(type, badgeId) {
+      apiCall('POST', '/chaos/' + type).then(function(r) {
+        showResult('chaosResult', r);
+        if (r.ok) setBadge(badgeId, true);
+      });
+    }
+
+    function chaosOff(type, badgeId) {
+      apiCall('POST', '/chaos/' + type + '/reset').then(function(r) {
+        showResult('chaosResult', r);
+        if (r.ok) setBadge(badgeId, false);
+      });
+    }
+
+    function cpuSpike() {
+      apiCall('POST', '/chaos/cpu').then(function(r) { showResult('chaosResult', r); });
+    }
+
+    function listOrders() {
+      apiCall('GET', '/orders').then(function(r) {
+        var tbody = document.getElementById('orderTableBody');
+        if (!tbody) return;
+        if (!r.ok || !Array.isArray(r.data) || r.data.length === 0) {
+          tbody.innerHTML = '<tr class="empty-row"><td colspan="8">' +
+            (r.ok ? '주문 없음' : '오류: ' + JSON.stringify(r.data)) + '</td></tr>';
+          return;
+        }
+        tbody.innerHTML = r.data.map(function(o) {
+          var statusClass = o.status === 'CONFIRMED' ? 'status-confirmed'
+                          : o.status === 'FAILED'    ? 'status-failed'
+                          : 'status-pending';
+          var dt = o.createdAt ? o.createdAt.replace('T', ' ').substring(0, 16) : '-';
+          return '<tr>' +
+            '<td>' + o.id + '</td>' +
+            '<td>' + o.userId + '</td>' +
+            '<td>' + o.productId + '</td>' +
+            '<td>' + o.quantity + '</td>' +
+            '<td class="' + statusClass + '">' + o.status + '</td>' +
+            '<td>' + (o.totalPrice || '-') + '</td>' +
+            '<td>' + dt + '</td>' +
+            '<td><button class="btn-del" onclick="deleteOrder(' + o.id + ')">삭제</button></td>' +
+            '</tr>';
+        }).join('');
+      });
+    }
+
+    function deleteOrder(id) {
+      apiCall('DELETE', '/orders/' + id).then(function(r) {
+        if (r.ok) listOrders();
+      });
+    }
+  </script>
+</body>
+</html>
