@@ -1,0 +1,35 @@
+# 환경변수
+.env
+.env.*
+*.env
+
+# Java 빌드 산출물
+*.class
+*.jar
+*.war
+bin/
+target/
+build/
+.gradle/
+.classpath
+.project
+.settings/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 모니터링 오버레이 (서버별 설정)
+docker-compose.monitory.yml
